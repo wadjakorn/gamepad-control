@@ -1,0 +1,83 @@
+# gamepad-control configuration
+# User override: ~/.config/gamepad-control/config.toml
+
+[mouse]
+deadzone = 0.15
+base_speed = 1500.0     # px/s at full deflection
+slow_multiplier = 0.2   # while LB held
+fast_multiplier = 2.5   # while RB held
+accel_exponent = 3.0    # cubic curve: fine near center, fast at edge
+
+[scroll]
+deadzone = 0.2
+speed = 600.0           # px/s at full deflection
+natural = true          # match macOS natural scrolling
+
+[triggers]
+threshold = 0.3
+repeat_per_second = 10.0
+
+[dpad]
+initial_delay = 0.35    # s before key repeat kicks in
+repeat_per_second = 15.0
+combo_repeat_per_second = 5.0  # repeat rate for held key: bindings (e.g. Cmd+Tab cycling)
+
+[typing]
+text_speed = 0.01       # delay between typed chars
+
+# ── Button bindings ──────────────────────────────────────────────
+# Buttons: a, b, x, y, lb, rb, back (=select), start, guide (=home), clear,
+#          ls, rs, dpad_up, dpad_down, dpad_left, dpad_right,
+#          lt, rt (analog triggers — "pressed" past [triggers].threshold;
+#          media:volume_* bindings ramp while held at repeat_per_second)
+# HyperX Clutch notes (verified by capture): "clear" sends only over
+# Bluetooth, "home" (guide, b12) sends only over USB/2.4GHz, and Turbo is
+# hardware-only (never reaches the OS — not bindable).
+# Actions: key:cmd+tab | arrow:up | media:play_pause/next/prev/
+#          volume_up/volume_down/mute | mouse:left_click/right_click |
+#          app:Spotify | mode:cycle/mouse/media/typing |
+#          speed:slow/fast (hold) | none
+# Note: LB+RB+Start always quits (hardcoded safety). Sticks are per-mode
+# behavior, not bindable: MOUSE = cursor+scroll, MEDIA = slow cursor.
+
+[bindings.mouse]
+a = "mouse:left_click"
+b = "mouse:right_click"
+x = "key:cmd+tab"
+y = "key:enter"        # Mission Control
+lb = "speed:slow"
+rb = "speed:fast"
+lt = "key:cmd+-"         # zoom out
+rt = "key:cmd+="         # zoom in (Cmd+= is zoom-in key, "+" can't be parsed in combos)
+start = "key:alt_r"     # hold = right Control
+back = "mode:cycle"
+clear = "key:esc"
+# home = "key:cmd+space"   # Spotlight — USB/2.4GHz only on HyperX Clutch
+dpad_up = "arrow:up"
+dpad_down = "arrow:down"
+dpad_left = "arrow:left"
+dpad_right = "arrow:right"
+
+[bindings.media]
+a = "media:play_pause"
+b = "media:mute"
+lb = "app:Spotify"
+rb = "app:Safari"
+lt = "media:volume_down"
+rt = "media:volume_up"
+back = "mode:cycle"
+dpad_up = "media:volume_up"
+dpad_down = "media:volume_down"
+dpad_left = "media:prev"
+dpad_right = "media:next"
+
+[bindings.typing]
+a = "key:enter"
+b = "key:backspace"
+x = "key:space"
+y = "key:esc"
+back = "mode:cycle"
+dpad_up = "arrow:up"
+dpad_down = "arrow:down"
+dpad_left = "arrow:left"
+dpad_right = "arrow:right"

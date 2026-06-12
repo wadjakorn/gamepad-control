@@ -1,0 +1,163 @@
+# Gamepad Control
+
+Control your Mac with a gamepad (Xbox layout): mouse cursor, scrolling, clicks,
+keyboard shortcuts, media keys, app launcher — from a menu bar app.
+
+Works with any Xbox-layout controller recognized by SDL's GameControllerDB
+(HyperX Clutch, 8BitDo, Logitech, GameSir, …) over USB, 2.4GHz dongle, or Bluetooth.
+
+## Quick start (from source)
+
+```bash
+uv sync
+uv run python -m gamepad_control          # menu bar app
+uv run python -m gamepad_control --debug  # headless, prints controller events
+```
+
+### Accessibility permission (required, one-time)
+
+macOS blocks synthetic mouse/keyboard input until you grant Accessibility:
+
+1. Open **System Settings → Privacy & Security → Accessibility**
+2. Add your terminal app (Terminal / iTerm) — or **GamepadControl.app** if using the packaged build
+3. Toggle it on, then restart the app
+
+Without this, sticks/buttons are read fine but nothing moves on screen.
+
+## Default mapping
+
+| Input | MOUSE mode 🖱 | MEDIA mode 🎵 | TYPING mode ⌨️ |
+|---|---|---|---|
+| Left stick | Move cursor | Move cursor (slow) | — |
+| Right stick | Scroll | — | — |
+| A | Left click / hold-drag | Play/pause | Enter |
+| B | Right click | Mute | Backspace |
+| X | Cmd+Tab | — | Space |
+| Y | Mission Control | — | Esc |
+| LB / RB | Cursor slow / fast | Launch app (config) | — |
+| LT / RT | Zoom out / in (Cmd+−/+) | Volume down / up | — |
+| D-pad | Arrow keys (repeats) | Prev/next, vol ±  | Arrow keys |
+| Start | Play/pause | — | — |
+| **Back** | **Cycle mode** | **Cycle mode** | **Cycle mode** |
+| LB+RB+Start | Quit | Quit | Quit |
+
+### Remapping buttons
+
+Every button in every mode is remappable via `[bindings.<mode>]` in `config.toml`
+(user overrides: `~/.config/gamepad-control/config.toml`, partial OK).
+Menu bar → **Edit Config…** opens the right file for your install (project
+config when running from source; the user override — created on first use —
+for the packaged .app) in VS Code, falling back to Cursor / Zed / Sublime /
+TextMate / the default text editor:
+
+```toml
+[bindings.mouse]
+x = "key:cmd+space"        # Spotlight instead of Cmd+Tab
+y = "app:Visual Studio Code"
+rs = "media:mute"
+```
+
+Binding types: `key:cmd+shift+t` (combo; hold = modifiers stay held, final key
+repeats — e.g. hold a Cmd+Tab binding to cycle the app switcher) ·
+`arrow:up` (hold-repeats) ·
+`media:play_pause/next/prev/volume_up/volume_down/mute` ·
+`mouse:left_click/right_click` (hold = drag) · `app:<Name>` ·
+`mode:cycle/mouse/media/typing` · `speed:slow/fast` (hold) · `none`.
+
+Key names: `cmd ctrl alt shift` (+ right-side variants `cmd_r ctrl_r alt_r
+shift_r`) `tab space enter esc backspace delete home end pageup pagedown
+up down left right f1–f12` + any single character. A lone modifier binding
+(e.g. `key:ctrl_r`) is held while the button is held.
+Extra buttons: `guide` (= `home`, the brand-logo button) and `clear` are
+bindable too. HyperX Clutch quirks (verified by HID capture): `home` sends
+only over USB/2.4GHz, `clear` sends only over Bluetooth, and Turbo never
+reaches the OS at all (hardware rapid-fire modifier — not bindable).
+Invalid bindings print a warning at startup and are skipped.
+Triggers are bindable as `lt` / `rt` — they act as buttons once pressed past
+`[triggers] threshold`; `media:volume_*` bindings ramp while held.
+LB+RB+Start always quits (hardcoded). Sticks are per-mode behavior
+(cursor / scroll), not bindable.
+
+### Cursor speed
+
+`[mouse]` in `config.toml`: `base_speed` (px/s), `slow_multiplier` /
+`fast_multiplier` (held via `speed:` bindings), `accel_exponent`
+(1.0 = linear, higher = finer control near center), `deadzone`.
+Scroll speed: `[scroll] speed`. Restart the app after changes.
+
+## Connection modes (USB / 2.4GHz / Bluetooth)
+
+macOS exposes the pad identically over all three transports — no app config needed.
+
+- **USB**: plug in, works immediately
+- **2.4GHz**: plug dongle in, switch pad to wireless mode
+- **Bluetooth**: pair via System Settings → Bluetooth (hold pad's pairing button)
+
+Note: over Bluetooth on macOS, SDL enumerates the pad but receives no (or
+garbled) input reports. The app therefore always uses a direct hidapi backend
+for Bluetooth pads, parsing the Xbox-BT HID report format — see
+`src/gamepad_control/hid_backend.py`. The menu bar shows "(BT)" when this
+backend is active. SDL handles USB and 2.4GHz, where it works fine.
+
+Hot-swap is supported: unplug/reconnect mid-session and the app picks the pad back up.
+
+## Build a distributable .app
+
+```bash
+./scripts/build-app.sh   # → dist/GamepadControl.app
+```
+
+Give the `.app` to anyone — no Python needed on their machine. They must:
+
+1. Drag to /Applications
+2. First launch: **right-click → Open** (app is unsigned, Gatekeeper warns once)
+3. Grant Accessibility permission (see above) — mandatory; the app reads the
+   pad but can't move the cursor or press keys without it
+
+Note for rebuilds: the app is ad-hoc signed, so every rebuild invalidates the
+previous Accessibility grant — **remove** GamepadControl from the Accessibility
+list and re-add it (toggling off/on may not be enough).
+
+## Auto-start at login
+
+```bash
+./scripts/install-launchagent.sh    # uses /Applications/GamepadControl.app
+./scripts/uninstall-launchagent.sh
+```
+
+Logs: `~/Library/Logs/gamepad-control.log`. Quit from the menu bar stays quit
+(launchd only restarts on crash).
+
+## Troubleshooting
+
+**Sticks/buttons read fine but nothing happens on screen** — Accessibility
+permission missing or stale. Remove the app (or your terminal, when running
+from source) from System Settings → Privacy & Security → Accessibility and
+re-add it, then restart the app. Required again after every rebuild of the
+.app (unsigned — the grant is tied to the signature).
+
+**Cursor drifts or pad won't reconnect (Bluetooth)** — check
+`~/Library/Logs/gamepad-control.log`. Every (re)connect logs which backend was
+chosen and why, e.g.:
+
+```
+[22:49:21] sdl probe 'HyperX Clutch' axes=[-32768, -32768, -32768, -32768] -> dead
+[22:49:21] connected hid: HyperX Clutch
+```
+
+A Bluetooth pad should always say `connected hid`; `connected sdl` with
+garbage axis values means SDL grabbed a dead BT connection (file a bug with
+the log lines). The app drops a pad whose axes pin at -32768 and reacquires
+automatically.
+
+**Cursor stutters when auto-started at login** — make sure the LaunchAgent
+was installed by `scripts/install-launchagent.sh` (it sets
+`ProcessType=Interactive`; without it launchd throttles the input loop to
+background QoS).
+
+## Adding other controllers
+
+Unrecognized pad? Find its GUID with `--debug`, add an SDL mapping line to
+`SDL_GAMECONTROLLERCONFIG` in `src/gamepad_control/controller.py` (see the
+HyperX Clutch entry there, and [SDL_GameControllerDB](https://github.com/mdqinc/SDL_GameControllerDB)
+for reference mappings).

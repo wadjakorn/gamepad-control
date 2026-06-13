@@ -159,6 +159,23 @@ tap_timeout = 0.3   # seconds; longer hold = no tap
 Scroll speed: `[scroll] speed`. Menu bar → **Reload Config** applies changes
 without a restart.
 
+### Keystroke overlay
+
+Menu bar → **Keystroke Overlay** toggles an on-screen display (off by default) of
+what each press triggers — KeyCastr-style pills like `X → key:cmd+tab` and
+`LT+A → key:cmd+c` stacked bottom-left, fading after ~1.5s. Handy for demos,
+screen recordings, or debugging a mapping. The overlay is click-through (never
+steals focus) and follows whichever screen the cursor is on. Tune it under
+`[overlay]` in `config.toml`:
+
+```toml
+[overlay]
+fade_seconds = 1.5   # how long each pill lingers
+max_lines = 6        # most pills shown at once
+font_size = 15
+margin = 40          # px inset from the screen corner
+```
+
 ## Connection modes (USB / 2.4GHz / Bluetooth)
 
 macOS exposes the pad identically over all three transports — no app config needed.

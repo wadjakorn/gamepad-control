@@ -9,10 +9,13 @@ from .notify import notify
 
 
 class TrayApp(rumps.App):
-    def __init__(self, manager, reader):
+    def __init__(self, manager, reader, overlay=None):
         super().__init__("🖱", quit_button=None)
         self.manager = manager
         self.reader = reader
+        self.overlay = overlay
+        self._overlay_item = rumps.MenuItem("Keystroke Overlay", callback=self._toggle_overlay)
+        self._overlay_item.state = 0  # off by default
         self._pause_item = rumps.MenuItem("Pause", callback=self._toggle_pause)
         self._status_item = rumps.MenuItem("Controller: …")
         self._status_item.set_callback(None)
@@ -25,6 +28,7 @@ class TrayApp(rumps.App):
             None,
             rumps.MenuItem("Edit Config…", callback=self._edit_config),
             rumps.MenuItem("Reload Config", callback=self._reload_config),
+            self._overlay_item,
             self._pause_item,
             rumps.MenuItem("Quit", callback=self._quit),
         ]
@@ -54,6 +58,12 @@ class TrayApp(rumps.App):
     def _reload_config(self, _):
         self.manager.reload()
         notify("Gamepad Control", "Config reloaded")
+
+    def _toggle_overlay(self, item):
+        if self.overlay is None:
+            return
+        item.state = 0 if item.state else 1
+        self.overlay.set_enabled(bool(item.state))
 
     def _toggle_pause(self, _):
         paused = self.manager.toggle_pause()

@@ -63,6 +63,15 @@ text_speed = 0.01       # delay between typed chars
 [chords]
 tap_timeout = 0.3
 
+# Keystroke overlay: on-screen "<button> → <binding>" pills for demos/debug.
+# Toggle from the menu bar ("Keystroke Overlay"); OFF by default. Follows the
+# cursor's screen, bottom-left.
+[overlay]
+fade_seconds = 1.5   # how long each pill stays before fading out
+max_lines = 6        # most pills shown at once
+font_size = 15
+margin = 40          # px inset from the screen's bottom-left corner
+
 [chords.mouse.lt]   # hold LT in MOUSE mode, then:
 a = "key:cmd+c"     #   LT+A = copy
 b = "key:cmd+v"     #   LT+B = paste

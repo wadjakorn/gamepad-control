@@ -70,9 +70,13 @@ def main():
 
     import rumps
 
+    from .overlay import KeystrokeOverlay
     from .tray import TrayApp
 
-    app = TrayApp(manager, reader)
+    overlay = KeystrokeOverlay(cfg)  # hidden until toggled from the menu
+    manager.on_trigger = overlay.feed
+
+    app = TrayApp(manager, reader, overlay)
     manager.on_mode_change = lambda mode: None  # tray polls via timer
     reader.on_connect = app.set_controller_name
     reader.on_disconnect = lambda: app.set_controller_name(None)

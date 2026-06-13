@@ -39,6 +39,17 @@ _BTN_BY_NAME = {
     "lt": c.BTN_LT, "rt": c.BTN_RT,
 }
 
+# human-readable button names for the keystroke overlay
+_BTN_DISPLAY = {
+    c.BTN_A: "A", c.BTN_B: "B", c.BTN_X: "X", c.BTN_Y: "Y",
+    c.BTN_BACK: "Back", c.BTN_GUIDE: "Guide", c.BTN_START: "Start",
+    c.BTN_MISC1: "Clear", c.BTN_LEFTSTICK: "LS", c.BTN_RIGHTSTICK: "RS",
+    c.BTN_LB: "LB", c.BTN_RB: "RB",
+    c.BTN_DPAD_UP: "D-pad ↑", c.BTN_DPAD_DOWN: "D-pad ↓",
+    c.BTN_DPAD_LEFT: "D-pad ←", c.BTN_DPAD_RIGHT: "D-pad →",
+    c.BTN_LT: "LT", c.BTN_RT: "RT",
+}
+
 _QUIT_COMBO = {c.BTN_LB, c.BTN_RB, c.BTN_START}
 
 
@@ -62,8 +73,11 @@ class ModeManager:
             cycle_mode=self.cycle_mode,
             media_repeat_per_second=cfg["triggers"]["repeat_per_second"],
         )
-        self.bindings = self._load_bindings(cfg)
-        self.chords = self._load_chords(cfg)
+        self.bindings, self.binding_labels = self._load_bindings(cfg)
+        self.chords, self.chord_labels = self._load_chords(cfg)
+        # optional sink for the keystroke overlay: called with a "<btn> → <raw>"
+        # label on every press that fires an action (set from __main__)
+        self.on_trigger: Callable[[str], None] | None = None
         # held chord modifiers: modifier btn -> [press_time, consumed]
         self._mod_held: dict[int, list] = {}
         # non-modifier buttons currently down -> the action used at press, so
@@ -75,8 +89,10 @@ class ModeManager:
         self._trig_down = {c.BTN_LT: False, c.BTN_RT: False}
 
     @staticmethod
-    def _load_bindings(cfg: dict) -> dict[Mode, dict[int, tuple]]:
+    def _load_bindings(cfg: dict):
+        """Return (parsed, labels): btn->action tuple and btn->raw binding string."""
         out: dict[Mode, dict[int, tuple]] = {m: {} for m in Mode}
+        labels: dict[Mode, dict[int, str]] = {m: {} for m in Mode}
         for mode_name, mode in _MODE_BY_NAME.items():
             section = cfg.get("bindings", {}).get(mode_name, {})
             for btn_name, binding in section.items():
@@ -86,14 +102,19 @@ class ModeManager:
                     continue
                 try:
                     out[mode][btn] = actions.parse(binding)
+                    labels[mode][btn] = binding
                 except ValueError as e:
                     print(f"config warning: [bindings.{mode_name}] {btn_name}: {e}", file=sys.stderr)
-        return out
+        return out, labels
 
     @staticmethod
-    def _load_chords(cfg: dict) -> dict[Mode, dict[int, dict[int, tuple]]]:
-        """Parse [chords.<mode>.<modifier>] layers: hold modifier, other buttons remap."""
+    def _load_chords(cfg: dict):
+        """Parse [chords.<mode>.<modifier>] layers: hold modifier, other buttons remap.
+
+        Returns (parsed, labels): mode->mod->btn->action and the matching raw strings.
+        """
         out: dict[Mode, dict[int, dict[int, tuple]]] = {m: {} for m in Mode}
+        labels: dict[Mode, dict[int, dict[int, str]]] = {m: {} for m in Mode}
         for mode_name, mode in _MODE_BY_NAME.items():
             section = cfg.get("chords", {}).get(mode_name, {})
             for mod_name, layer in section.items():
@@ -110,9 +131,10 @@ class ModeManager:
                         continue
                     try:
                         out[mode].setdefault(mod, {})[btn] = actions.parse(binding)
+                        labels[mode].setdefault(mod, {})[btn] = binding
                     except ValueError as e:
                         print(f"config warning: [chords.{mode_name}.{mod_name}] {btn_name}: {e}", file=sys.stderr)
-        return out
+        return out, labels
 
     # --- mode switching ---
 
@@ -140,8 +162,8 @@ class ModeManager:
         self.mouse.cfg = cfg
         self.keys.cfg = cfg
         self.media.cfg = cfg
-        self.bindings = self._load_bindings(cfg)
-        self.chords = self._load_chords(cfg)
+        self.bindings, self.binding_labels = self._load_bindings(cfg)
+        self.chords, self.chord_labels = self._load_chords(cfg)
         self._tap_timeout = cfg.get("chords", {}).get("tap_timeout", 0.3)
         self.runner.media_repeat_per_second = cfg["triggers"]["repeat_per_second"]
         self._release_held()  # drop anything held under the old bindings
@@ -176,10 +198,11 @@ class ModeManager:
                 # a modifier here: enter its layer; base fires only on a quick tap
                 self._mod_held[btn] = [time.monotonic(), False]
                 return
-            action = self._resolve(btn)
+            action, label = self._resolve(btn)
             if action is not None:
                 self._active[btn] = action
                 self.runner.run(action, True)
+                self._emit(action, label)
         else:
             if btn in self._mod_held:
                 press_t, consumed = self._mod_held.pop(btn)
@@ -188,19 +211,34 @@ class ModeManager:
                     if base is not None:  # tap = run its own binding as down+up
                         self.runner.run(base, True)
                         self.runner.run(base, False)
+                        self._emit(base, self._label(btn))
                 return
             action = self._active.pop(btn, None) or self.bindings[self.mode].get(btn)
             if action is not None:
                 self.runner.run(action, False)
 
     def _resolve(self, btn: int):
-        """Chord-layer action if a holding modifier maps btn, else the base binding."""
+        """(action, overlay label). Chord layer if a holding modifier maps btn, else base."""
         for mod_btn, st in self._mod_held.items():
             layer = self.chords[self.mode].get(mod_btn, {})
             if btn in layer:
                 st[1] = True  # consumed -> suppress this modifier's tap
-                return layer[btn]
-        return self.bindings[self.mode].get(btn)
+                raw = self.chord_labels.get(self.mode, {}).get(mod_btn, {}).get(btn)
+                return layer[btn], self._label(btn, mod_btn, raw)
+        return self.bindings[self.mode].get(btn), self._label(btn)
+
+    def _label(self, btn: int, mod_btn: int | None = None, raw: str | None = None) -> str:
+        """'X → key:cmd+tab' or 'LT+A → key:cmd+c' for the keystroke overlay."""
+        if raw is None:
+            raw = self.binding_labels.get(self.mode, {}).get(btn, "")
+        name = _BTN_DISPLAY.get(btn, str(btn))
+        if mod_btn is not None:
+            name = f"{_BTN_DISPLAY.get(mod_btn, mod_btn)}+{name}"
+        return f"{name} → {raw}" if raw else name
+
+    def _emit(self, action, label: str):
+        if self.on_trigger and action and action[0] != "none" and label:
+            self.on_trigger(label)
 
     def handle_frame(self, state: c.State, dt: float):
         if self.paused:

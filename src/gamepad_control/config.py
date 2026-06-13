@@ -32,7 +32,9 @@ def editable_config_path() -> Path:
     """
     if not getattr(sys, "frozen", False):
         return _bundled_config()
-    if not USER_CONFIG.exists():
+    # (re)seed when missing OR empty — a 0-byte file (e.g. an editor crash
+    # truncated it) must not leave the user staring at a blank template
+    if not USER_CONFIG.exists() or USER_CONFIG.stat().st_size == 0:
         USER_CONFIG.parent.mkdir(parents=True, exist_ok=True)
         USER_CONFIG.write_bytes(_bundled_config().read_bytes())
     return USER_CONFIG
@@ -42,6 +44,11 @@ def load() -> dict:
     with open(_bundled_config(), "rb") as f:
         cfg = tomllib.load(f)
     if USER_CONFIG.exists():
-        with open(USER_CONFIG, "rb") as f:
-            cfg = _merge(cfg, tomllib.load(f))
+        try:
+            with open(USER_CONFIG, "rb") as f:
+                cfg = _merge(cfg, tomllib.load(f))
+        except tomllib.TOMLDecodeError as e:
+            # a corrupt or half-written override must not take the app down —
+            # fall back to bundled defaults and tell the user where to look
+            print(f"config warning: ignoring {USER_CONFIG} ({e})", file=sys.stderr)
     return cfg

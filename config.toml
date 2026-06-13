@@ -34,11 +34,21 @@ text_speed = 0.01       # delay between typed chars
 # Bluetooth, "home" (guide, b12) sends only over USB/2.4GHz, and Turbo is
 # hardware-only (never reaches the OS — not bindable).
 # Actions: key:cmd+tab | arrow:up | media:play_pause/next/prev/
-#          volume_up/volume_down/mute | mouse:left_click/right_click |
+#          volume_up/volume_down/mute |
+#          mouse:left_click/right_click/double_click/triple_click |
 #          app:Spotify | mode:cycle/mouse/media/typing |
 #          speed:slow/fast (hold) | none
 # Note: LB+RB+Start always quits (hardcoded safety). Sticks are per-mode
 # behavior, not bindable: MOUSE = cursor+scroll, MEDIA = slow cursor.
+#
+# ── Text selection & clipboard recipes (work in any mode) ────────
+#   copy/paste/cut/select-all : key:cmd+c | key:cmd+v | key:cmd+x | key:cmd+a
+#   select by char/line       : bind a button to key:shift (held), then
+#                               D-pad arrows = Shift+Arrow selection, and
+#                               A (left_click) while held = shift-click/drag
+#   select a word / a line    : mouse:double_click / mouse:triple_click
+#                               (clicks at the cursor — move it there first)
+#   select word by keyboard   : key:alt+shift+left | key:alt+shift+right
 
 [bindings.mouse]
 a = "mouse:left_click"
@@ -52,6 +62,8 @@ rt = "key:cmd+="         # zoom in (Cmd+= is zoom-in key, "+" can't be parsed in
 start = "key:alt_r"     # hold = right Control
 back = "mode:cycle"
 clear = "key:esc"
+ls = "mouse:double_click"  # press stick to select the word under the cursor
+rs = "key:shift"           # hold + D-pad = Shift+Arrow select; hold + A = shift-click
 # home = "key:cmd+space"   # Spotlight — USB/2.4GHz only on HyperX Clutch
 dpad_up = "arrow:up"
 dpad_down = "arrow:down"
@@ -72,10 +84,17 @@ dpad_left = "media:prev"
 dpad_right = "media:next"
 
 [bindings.typing]
+# full text-editing loadout: navigate with D-pad, hold rs to select,
+# then copy/cut/paste — a complete keyboard-style editor on the pad
 a = "key:enter"
 b = "key:backspace"
 x = "key:space"
 y = "key:esc"
+lb = "key:cmd+c"        # copy
+rb = "key:cmd+v"        # paste
+lt = "key:cmd+x"        # cut
+rt = "key:cmd+a"        # select all
+rs = "key:shift"        # hold + D-pad = Shift+Arrow selection
 back = "mode:cycle"
 dpad_up = "arrow:up"
 dpad_down = "arrow:down"

@@ -78,8 +78,10 @@ def parse(binding: str):
             raise ValueError(f"unknown media action: {binding!r}")
         return ("media", value)
     if kind == "mouse":
-        if value not in ("left_click", "right_click"):
-            raise ValueError(f"mouse must be left_click/right_click: {binding!r}")
+        if value not in ("left_click", "right_click", "double_click", "triple_click"):
+            raise ValueError(
+                f"mouse must be left_click/right_click/double_click/triple_click: {binding!r}"
+            )
         return ("mouse", value)
     if kind == "app":
         return ("app", value)
@@ -119,6 +121,10 @@ class ActionRunner:
         if kind == "none":
             return
         if kind == "mouse":
+            if payload in ("double_click", "triple_click"):
+                if down:  # fire once on press; nothing to hold/release
+                    self.mouse.click_multi(2 if payload == "double_click" else 3)
+                return
             right = payload == "right_click"
             self.mouse.press(right=right) if down else self.mouse.release(right=right)
             return

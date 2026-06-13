@@ -113,3 +113,7 @@ class MouseOutput:
 
     def release(self, right: bool = False):
         self.mouse.release(Button.right if right else Button.left)
+
+    def click_multi(self, count: int):
+        # double = select word, triple = select line/paragraph (macOS text views)
+        self.mouse.click(Button.left, count)

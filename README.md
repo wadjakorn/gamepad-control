@@ -61,7 +61,8 @@ Binding types: `key:cmd+shift+t` (combo; hold = modifiers stay held, final key
 repeats — e.g. hold a Cmd+Tab binding to cycle the app switcher) ·
 `arrow:up` (hold-repeats) ·
 `media:play_pause/next/prev/volume_up/volume_down/mute` ·
-`mouse:left_click/right_click` (hold = drag) · `app:<Name>` ·
+`mouse:left_click/right_click` (hold = drag) ·
+`mouse:double_click/triple_click` (select word / line) · `app:<Name>` ·
 `mode:cycle/mouse/media/typing` · `speed:slow/fast` (hold) · `none`.
 
 Key names: `cmd ctrl alt shift` (+ right-side variants `cmd_r ctrl_r alt_r
@@ -77,6 +78,25 @@ Triggers are bindable as `lt` / `rt` — they act as buttons once pressed past
 `[triggers] threshold`; `media:volume_*` bindings ramp while held.
 LB+RB+Start always quits (hardcoded). Sticks are per-mode behavior
 (cursor / scroll), not bindable.
+
+### Text selection & clipboard
+
+Selecting and copying text works through ordinary bindings — drop these into
+any `[bindings.<mode>]` section:
+
+| Goal | Binding | How to use |
+|---|---|---|
+| Copy / paste / cut / select-all | `key:cmd+c` / `cmd+v` / `cmd+x` / `cmd+a` | press |
+| Select by char / line | `key:shift` | **hold** it, then D-pad arrows = Shift+Arrow; hold + `A` = shift-click / shift-drag |
+| Select a word | `mouse:double_click` | move cursor onto the word, press |
+| Select a line / paragraph | `mouse:triple_click` | move cursor onto it, press |
+| Select word-by-word (keyboard) | `key:alt+shift+left` / `right` | press / hold-repeat |
+
+The shipped defaults already wire some of this up: in **MOUSE** mode `ls`
+(left-stick click) selects the word under the cursor and `rs` is a hold-to-
+select Shift; **TYPING** mode is a full editor — D-pad navigates, `rs` selects,
+`lb/rb/lt/rt` = copy/paste/cut/select-all. Key bindings are layout-independent,
+so copy/paste hit the right keys even with a non-Latin input source active.
 
 ### Cursor speed
 

@@ -49,6 +49,25 @@ text_speed = 0.01       # delay between typed chars
 #   select a word / a line    : mouse:double_click / mouse:triple_click
 #                               (clicks at the cursor — move it there first)
 #   select word by keyboard   : key:alt+shift+left | key:alt+shift+right
+#
+# ── Chord bindings (hold a modifier, other buttons remap) ────────
+#   [chords.<mode>.<modifier>] tables let you hold one button and have
+#   OTHER buttons fire different actions — e.g. lt+A=copy, lt+X=zoom out.
+#   Any button can be a modifier. Tap-vs-hold: a QUICK tap of the modifier
+#   still runs its own [bindings.<mode>] action; HOLDING it + pressing a
+#   mapped button runs the chord action. A modifier should have a momentary
+#   base binding (key combo, click) — not a hold-style one (speed:/key:shift),
+#   since holding now enters the chord layer.
+#   tap_timeout (s): max hold for the tap to still fire (default 0.3).
+
+[chords]
+tap_timeout = 0.3
+
+[chords.mouse.lt]   # hold LT in MOUSE mode, then:
+a = "key:cmd+c"     #   LT+A = copy
+b = "key:cmd+v"     #   LT+B = paste
+x = "key:cmd+-"     #   LT+X = zoom out
+y = "key:cmd+="     #   LT+Y = zoom in
 
 [bindings.mouse]
 a = "mouse:left_click"

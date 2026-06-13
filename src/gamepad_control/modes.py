@@ -6,6 +6,7 @@ per-mode structural behavior, not bindable.
 """
 
 import sys
+import time
 from enum import Enum
 from typing import Callable
 
@@ -62,6 +63,14 @@ class ModeManager:
             media_repeat_per_second=cfg["triggers"]["repeat_per_second"],
         )
         self.bindings = self._load_bindings(cfg)
+        self.chords = self._load_chords(cfg)
+        # held chord modifiers: modifier btn -> [press_time, consumed]
+        self._mod_held: dict[int, list] = {}
+        # non-modifier buttons currently down -> the action used at press, so
+        # release uses the SAME action even if the chord layer changed mid-hold
+        self._active: dict[int, tuple] = {}
+        # tap of a modifier within this window (and no chord pressed) fires its base
+        self._tap_timeout = cfg.get("chords", {}).get("tap_timeout", 0.3)
         # analog triggers fire lt/rt virtual buttons when crossing the threshold
         self._trig_down = {c.BTN_LT: False, c.BTN_RT: False}
 
@@ -81,6 +90,30 @@ class ModeManager:
                     print(f"config warning: [bindings.{mode_name}] {btn_name}: {e}", file=sys.stderr)
         return out
 
+    @staticmethod
+    def _load_chords(cfg: dict) -> dict[Mode, dict[int, dict[int, tuple]]]:
+        """Parse [chords.<mode>.<modifier>] layers: hold modifier, other buttons remap."""
+        out: dict[Mode, dict[int, dict[int, tuple]]] = {m: {} for m in Mode}
+        for mode_name, mode in _MODE_BY_NAME.items():
+            section = cfg.get("chords", {}).get(mode_name, {})
+            for mod_name, layer in section.items():
+                if not isinstance(layer, dict):
+                    continue  # e.g. the top-level tap_timeout key
+                mod = _BTN_BY_NAME.get(mod_name.lower())
+                if mod is None:
+                    print(f"config warning: unknown modifier {mod_name!r} in [chords.{mode_name}]", file=sys.stderr)
+                    continue
+                for btn_name, binding in layer.items():
+                    btn = _BTN_BY_NAME.get(btn_name.lower())
+                    if btn is None:
+                        print(f"config warning: unknown button {btn_name!r} in [chords.{mode_name}.{mod_name}]", file=sys.stderr)
+                        continue
+                    try:
+                        out[mode].setdefault(mod, {})[btn] = actions.parse(binding)
+                    except ValueError as e:
+                        print(f"config warning: [chords.{mode_name}.{mod_name}] {btn_name}: {e}", file=sys.stderr)
+        return out
+
     # --- mode switching ---
 
     def cycle_mode(self):
@@ -93,6 +126,25 @@ class ModeManager:
         notify("Gamepad Control", f"Mode: {mode.value}")
         if self.on_mode_change:
             self.on_mode_change(mode)
+
+    def reload(self):
+        """Re-read config.toml and apply live — no app restart.
+
+        Re-assigns the cfg reference on each output (single atomic attr swap, so
+        the reader thread never sees a torn dict) and rebuilds the init-cached
+        tables. mouse/keys/media read self.cfg live, so the swap is enough there.
+        """
+        from .config import load
+        cfg = load()
+        self.cfg = cfg
+        self.mouse.cfg = cfg
+        self.keys.cfg = cfg
+        self.media.cfg = cfg
+        self.bindings = self._load_bindings(cfg)
+        self.chords = self._load_chords(cfg)
+        self._tap_timeout = cfg.get("chords", {}).get("tap_timeout", 0.3)
+        self.runner.media_repeat_per_second = cfg["triggers"]["repeat_per_second"]
+        self._release_held()  # drop anything held under the old bindings
 
     def toggle_pause(self) -> bool:
         self.paused = not self.paused
@@ -108,6 +160,8 @@ class ModeManager:
         self.runner.release_media_held()
         self.keys.release_all_arrows()
         self.keys.release_all_combos()
+        self._mod_held.clear()
+        self._active.clear()
 
     # --- input routing (called from reader thread) ---
 
@@ -117,9 +171,36 @@ class ModeManager:
             return
         if self.paused:
             return
-        action = self.bindings[self.mode].get(btn)
-        if action is not None:
-            self.runner.run(action, down)
+        if down:
+            if btn in self.chords.get(self.mode, {}):
+                # a modifier here: enter its layer; base fires only on a quick tap
+                self._mod_held[btn] = [time.monotonic(), False]
+                return
+            action = self._resolve(btn)
+            if action is not None:
+                self._active[btn] = action
+                self.runner.run(action, True)
+        else:
+            if btn in self._mod_held:
+                press_t, consumed = self._mod_held.pop(btn)
+                if not consumed and time.monotonic() - press_t < self._tap_timeout:
+                    base = self.bindings[self.mode].get(btn)
+                    if base is not None:  # tap = run its own binding as down+up
+                        self.runner.run(base, True)
+                        self.runner.run(base, False)
+                return
+            action = self._active.pop(btn, None) or self.bindings[self.mode].get(btn)
+            if action is not None:
+                self.runner.run(action, False)
+
+    def _resolve(self, btn: int):
+        """Chord-layer action if a holding modifier maps btn, else the base binding."""
+        for mod_btn, st in self._mod_held.items():
+            layer = self.chords[self.mode].get(mod_btn, {})
+            if btn in layer:
+                st[1] = True  # consumed -> suppress this modifier's tap
+                return layer[btn]
+        return self.bindings[self.mode].get(btn)
 
     def handle_frame(self, state: c.State, dt: float):
         if self.paused:

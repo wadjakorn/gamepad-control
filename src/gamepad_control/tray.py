@@ -5,6 +5,7 @@ import rumps
 from .config import editable_config_path
 from .launcher import open_in_editor
 from .modes import Mode
+from .notify import notify
 
 
 class TrayApp(rumps.App):
@@ -23,6 +24,7 @@ class TrayApp(rumps.App):
             rumps.MenuItem("Mode: Typing", callback=lambda _: self._set_mode(Mode.TYPING)),
             None,
             rumps.MenuItem("Edit Config…", callback=self._edit_config),
+            rumps.MenuItem("Reload Config", callback=self._reload_config),
             self._pause_item,
             rumps.MenuItem("Quit", callback=self._quit),
         ]
@@ -48,6 +50,10 @@ class TrayApp(rumps.App):
 
     def _edit_config(self, _):
         open_in_editor(editable_config_path())
+
+    def _reload_config(self, _):
+        self.manager.reload()
+        notify("Gamepad Control", "Config reloaded")
 
     def _toggle_pause(self, _):
         paused = self.manager.toggle_pause()

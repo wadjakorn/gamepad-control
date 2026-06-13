@@ -57,6 +57,11 @@ y = "app:Visual Studio Code"
 rs = "media:mute"
 ```
 
+After editing, menu bar → **Reload Config** applies changes live — no app
+restart needed (re-reads `config.toml`, rebuilds bindings/chords/speeds, and
+drops anything held). A bad edit falls back to the bundled defaults and logs a
+warning to `~/Library/Logs/gamepad-control.log` rather than crashing.
+
 Binding types: `key:cmd+shift+t` (combo; hold = modifiers stay held, final key
 repeats — e.g. hold a Cmd+Tab binding to cycle the app switcher) ·
 `arrow:up` (hold-repeats) ·
@@ -98,12 +103,61 @@ select Shift; **TYPING** mode is a full editor — D-pad navigates, `rs` selects
 `lb/rb/lt/rt` = copy/paste/cut/select-all. Key bindings are layout-independent,
 so copy/paste hit the right keys even with a non-Latin input source active.
 
+### Chord bindings (hold-modifier layers)
+
+Hold one button as a modifier and other buttons fire different actions —
+multiplying the bindings available per mode without adding a new mode. Define
+`[chords.<mode>.<modifier>]` tables in `config.toml`:
+
+```toml
+# Section name = [chords.<mode>.<modifier>]
+#   <mode>     : mouse | media | typing
+#   <modifier> : the button you hold (any button name)
+#   keys below : the buttons that remap while the modifier is held
+
+[chords.mouse.lt]   # hold LT in MOUSE mode, then:
+a = "key:cmd+c"     #   LT+A = copy
+b = "key:cmd+v"     #   LT+B = paste
+x = "key:cmd+-"     #   LT+X = zoom out
+y = "key:cmd+="     #   LT+Y = zoom in
+
+[chords.mouse.rt]   # a second modifier (window/desktop shortcuts):
+dpad_left  = "key:ctrl+left"    #   RT + D-pad ← = prev desktop
+dpad_right = "key:ctrl+right"   #   RT + D-pad → = next desktop
+y = "key:cmd+w"                 #   RT + Y = close window
+a = "app:Spotify"               #   RT + A = launch Spotify
+
+[chords.typing.rb]  # works in any mode — here, an editor layer:
+a = "key:cmd+z"     #   RB + A = undo
+b = "key:cmd+shift+z"  # RB + B = redo
+x = "key:cmd+s"     #   RB + X = save
+```
+
+`[chords]` itself can hold one optional key, `tap_timeout`:
+
+```toml
+[chords]
+tap_timeout = 0.3   # seconds; longer hold = no tap
+```
+
+- **Any button** can be a modifier (`lt`, `rt`, `lb`, `back`, …); inner buttons
+  use the same binding strings as `[bindings.<mode>]`.
+- **Tap fires, hold modifies**: a quick tap of the modifier still runs its own
+  `[bindings.<mode>]` action; holding it + pressing a mapped button runs the
+  chord. The tap window is `[chords] tap_timeout` (default 0.3s).
+- A button used as a modifier should have a **momentary** base binding (a key
+  combo or click) — not a hold-style one (`speed:` / `key:shift`), since holding
+  it now enters the chord layer instead of holding the base action.
+- Holding a modifier longer than `tap_timeout` with no mapped button pressed
+  fires nothing on release.
+
 ### Cursor speed
 
 `[mouse]` in `config.toml`: `base_speed` (px/s), `slow_multiplier` /
 `fast_multiplier` (held via `speed:` bindings), `accel_exponent`
 (1.0 = linear, higher = finer control near center), `deadzone`.
-Scroll speed: `[scroll] speed`. Restart the app after changes.
+Scroll speed: `[scroll] speed`. Menu bar → **Reload Config** applies changes
+without a restart.
 
 ## Connection modes (USB / 2.4GHz / Bluetooth)
 

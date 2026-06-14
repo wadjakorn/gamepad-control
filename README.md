@@ -163,18 +163,25 @@ without a restart.
 
 Menu bar → **Keystroke Overlay** toggles an on-screen display (off by default) of
 what each press triggers — KeyCastr-style pills like `X → key:cmd+tab` and
-`LT+A → key:cmd+c` stacked bottom-left, fading after ~1.5s. Handy for demos,
-screen recordings, or debugging a mapping. The overlay is click-through (never
-steals focus) and follows whichever screen the cursor is on. Tune it under
-`[overlay]` in `config.toml`:
+`LT+A → key:cmd+c`, fading after ~1.5s. Handy for demos, screen recordings, or
+debugging a mapping. The overlay is click-through (never steals focus) and follows
+whichever screen the cursor is on. Tune the look under `[overlay]` in `config.toml`
+(all keys optional; **Reload Config** applies changes live):
 
 ```toml
 [overlay]
-fade_seconds = 1.5   # how long each pill lingers
-max_lines = 6        # most pills shown at once
+fade_seconds = 1.5          # how long each pill lingers
+max_lines = 6               # most pills shown at once
 font_size = 15
-margin = 40          # px inset from the screen corner
+margin = 40                 # px inset from the anchored corner
+corner = "bottom_left"      # bottom_left | bottom_right | top_left | top_right
+pill_color = "#000000"      # pill background (hex)
+pill_opacity = 0.72         # pill background alpha, 0-1
+text_color = "#FFFFFF"      # label text (hex)
 ```
+
+The stack anchors to the chosen `corner` and right-aligns on the right-hand corners;
+top corners stack downward, bottom corners upward.
 
 ## Connection modes (USB / 2.4GHz / Bluetooth)
 

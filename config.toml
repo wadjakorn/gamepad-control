@@ -65,12 +65,16 @@ tap_timeout = 0.3
 
 # Keystroke overlay: on-screen "<button> → <binding>" pills for demos/debug.
 # Toggle from the menu bar ("Keystroke Overlay"); OFF by default. Follows the
-# cursor's screen, bottom-left.
+# cursor's screen. Colors are hex strings; all keys optional (defaults shown).
 [overlay]
-fade_seconds = 1.5   # how long each pill stays before fading out
-max_lines = 6        # most pills shown at once
+fade_seconds = 1.5          # how long each pill stays before fading out
+max_lines = 6               # most pills shown at once
 font_size = 15
-margin = 40          # px inset from the screen's bottom-left corner
+margin = 40                 # px inset from the anchored corner
+corner = "bottom_left"      # bottom_left | bottom_right | top_left | top_right
+pill_color = "#000000"      # pill background (hex)
+pill_opacity = 0.72         # pill background alpha, 0-1
+text_color = "#FFFFFF"      # label text (hex)
 
 [chords.mouse.lt]   # hold LT in MOUSE mode, then:
 a = "key:cmd+c"     #   LT+A = copy

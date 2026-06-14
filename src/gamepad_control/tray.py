@@ -57,6 +57,9 @@ class TrayApp(rumps.App):
 
     def _reload_config(self, _):
         self.manager.reload()
+        if self.overlay is not None:
+            from . import config
+            self.overlay.apply_config(config.load())
         notify("Gamepad Control", "Config reloaded")
 
     def _toggle_overlay(self, item):

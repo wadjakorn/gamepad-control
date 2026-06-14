@@ -56,7 +56,7 @@ def main():
 
     if debug:
         # headless: no menu bar, Ctrl+C to stop
-        reader.on_connect = lambda name: print(f"connected: {name}")
+        reader.on_connect = lambda name, transport: print(f"connected: {name} [{transport}]")
         reader.on_disconnect = lambda: print("disconnected")
         reader.start()
         print("debug mode — press buttons / move sticks; Ctrl+C to quit")
@@ -78,8 +78,23 @@ def main():
 
     app = TrayApp(manager, reader, overlay)
     manager.on_mode_change = lambda mode: None  # tray polls via timer
-    reader.on_connect = app.set_controller_name
-    reader.on_disconnect = lambda: app.set_controller_name(None)
+
+    # connection-status pills: BT shows "Bluetooth", USB/2.4GHz both "Wired"
+    # (the code can't tell them apart). Pills auto-pop even with the overlay off.
+    last_name = {"name": None}
+
+    def on_connect(name, transport):
+        last_name["name"] = name
+        bt = transport == "bluetooth"
+        app.set_controller_name(f"{name} (BT)" if bt else name)
+        overlay.notify_status(f"🎮 {name} · {'Bluetooth' if bt else 'Wired'} connected")
+
+    def on_disconnect():
+        overlay.notify_status(f"🎮 {last_name['name'] or 'Controller'} disconnected")
+        app.set_controller_name(None)
+
+    reader.on_connect = on_connect
+    reader.on_disconnect = on_disconnect
 
     # quit combo is detected on the reader thread; rumps must quit from the
     # main thread, so the tray timer watches the flag

@@ -48,6 +48,9 @@ class TrayApp(rumps.App):
         self.title = f"{icon}⏸" if self.manager.paused else icon
         name = self._controller_name
         self._status_item.title = f"Controller: {name or 'not connected'}"
+        # main-thread kick so connection-status pills can auto-show with overlay off
+        if self.overlay is not None:
+            self.overlay.pump()
 
     def _set_mode(self, mode: Mode):
         self.manager.set_mode(mode)

@@ -178,7 +178,7 @@ class ControllerReader:
                 hidpad = hid_backend.HidPad(path)
                 log(f"connected hid: {name}")
                 if self.on_connect:
-                    self.on_connect(f"{name} (BT)")
+                    self.on_connect(name, "bluetooth")
                 return "hid", hidpad
             except OSError as e:
                 log(f"hid open failed ({path!r}): {e}")
@@ -195,7 +195,7 @@ class ControllerReader:
             if not dead:
                 log(f"connected sdl: {pad.name}")
                 if self.on_connect:
-                    self.on_connect(pad.name)
+                    self.on_connect(pad.name, "wired")
                 return "sdl", pad
             pad.quit()
         return "sdl", None

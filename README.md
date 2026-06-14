@@ -172,7 +172,8 @@ whichever screen the cursor is on. Tune the look under `[overlay]` in `config.to
 [overlay]
 fade_seconds = 1.5          # how long each pill lingers
 max_lines = 6               # most pills shown at once
-font_size = 15
+font_size = 15              # scales the whole pill (text + box) together
+show_connection = true      # pill on connect / disconnect / transport switch
 margin = 40                 # px inset from the anchored corner
 corner = "bottom_left"      # bottom_left | bottom_right | top_left | top_right
 pill_color = "#000000"      # pill background (hex)
@@ -182,6 +183,14 @@ text_color = "#FFFFFF"      # label text (hex)
 
 The stack anchors to the chosen `corner` and right-aligns on the right-hand corners;
 top corners stack downward, bottom corners upward.
+
+**Connection pills**: with `show_connection = true` (default), the overlay also pops a
+pill when the pad connects, disconnects, or switches transport — e.g.
+`🎮 HyperX Clutch · Bluetooth connected`. These auto-show even when the Keystroke Overlay
+toggle is off (the panel appears for `fade_seconds`, then retracts). Because macOS exposes
+USB and 2.4GHz identically, both read as **Wired**; only **Bluetooth** is distinguished. A
+transport switch shows two pills (disconnect, then reconnect). Set `show_connection = false`
+to suppress them without disabling the keystroke overlay.
 
 ## Connection modes (USB / 2.4GHz / Bluetooth)
 

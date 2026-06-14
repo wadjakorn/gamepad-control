@@ -69,7 +69,10 @@ tap_timeout = 0.3
 [overlay]
 fade_seconds = 1.5          # how long each pill stays before fading out
 max_lines = 6               # most pills shown at once
-font_size = 15
+font_size = 15              # scales the whole pill (text + box) together
+show_connection = true      # pop a pill on connect/disconnect/transport switch
+                            # (auto-shows even when the overlay toggle is off;
+                            #  USB and 2.4GHz both read as "Wired", BT as "Bluetooth")
 margin = 40                 # px inset from the anchored corner
 corner = "bottom_left"      # bottom_left | bottom_right | top_left | top_right
 pill_color = "#000000"      # pill background (hex)
